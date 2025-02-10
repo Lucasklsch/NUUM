@@ -1,45 +1,247 @@
-function showImpactAtEnemy(enemy) {
-  // Calcula a posição do inimigo na tela
-  let dx = enemy.x - playerX;
-  let dy = enemy.y - playerY;
-  let distance = Math.sqrt(dx * dx + dy * dy);
-  let enemyAngle = Math.atan2(dx, dy) - playerA;
-  let enemyPos = (enemyAngle + FOV / 2.0) / FOV;
-  if (enemyPos < 0 || enemyPos > 1) return;
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <title>Nuum Game</title>
+  <style>
+    body {
+      background-color: black;
+      color: white;
+      font-family: monospace;
+      margin: 0;
+      text-align: center;
+    }
+    /* Container do jogo */
+    #game-container {
+      position: relative;
+      display: inline-block;
+      margin-top: 20px;
+    }
+    /* HUD */
+    #hud {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 4;
+      color: yellow;
+      font-size: 18px;
+      pointer-events: none;
+    }
+    /* Renderização ASCII */
+    #screen {
+      z-index: 1;
+      white-space: pre;
+      margin: 0;
+      padding: 0;
+    }
+    /* Imagem da arma */
+    #weapon {
+      position: absolute;
+      bottom: -25%;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+      width: 300px;
+      pointer-events: none;
+    }
+    #weapon.firing {
+      transform: translateX(-50%) translateY(-10px);
+      transition: transform 0.1s;
+    }
+    /* Touch controls (invisíveis por padrão) */
+    #touch-controls {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 5;
+      display: none; /* Será exibido somente no modo touch */
+      user-select: none;
+    }
+    #dpad {
+      display: grid;
+      grid-template-areas: 
+         ". up ."
+         "left . right"
+         ". down .";
+      grid-gap: 10px;
+      margin-bottom: 20px;
+    }
+    #dpad button {
+      background: #333;
+      border: 2px solid #0F0;
+      color: #0F0;
+      font-size: 1.2rem;
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+    }
+    #btn-shoot {
+      background: #0F0;
+      border: 2px solid #0F0;
+      color: #000;
+      font-size: 1.2rem;
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+    }
+    /* Oculta elementos de áudio */
+    audio { display: none; }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div id="hud"></div>
+    <pre id="screen"></pre>
+    <img id="weapon" src="weapon.png" alt="Arma">
+    
+    <!-- Controles para Touch Screen -->
+    <div id="touch-controls">
+      <div id="dpad">
+        <button id="btn-up" style="grid-area: up;">&#9650;</button>
+        <button id="btn-left" style="grid-area: left;">&#9664;</button>
+        <button id="btn-right" style="grid-area: right;">&#9654;</button>
+        <button id="btn-down" style="grid-area: down;">&#9660;</button>
+      </div>
+      <button id="btn-shoot">Shoot</button>
+    </div>
+    
+    <!-- Elementos de áudio -->
+    <audio id="pistolSound" src="pistol.wav"></audio>
+    <audio id="shotgunSound" src="shotgun.wav"></audio>
+    <audio id="bfgSound" src="bfg.wav"></audio>
+    <audio id="walkSound" src="walk.wav" loop></audio>
+  </div>
   
-  // Define dimensões aproximadas do inimigo na tela
-  let enemyHeight = Math.floor(screenHeight / distance);
-  let enemyWidth = enemyHeight;
-  let enemyColumn = Math.floor(enemyPos * screenWidth) - Math.floor(enemyWidth / 2);
-  let enemyRow = Math.floor((screenHeight / 2) - enemyHeight / 2);
-  
-  // Obtém informações de posicionamento da área de renderização (screen)
-  let screenEl = document.getElementById("screen");
-  let rect = screenEl.getBoundingClientRect();
-  let charWidth = rect.width / screenWidth;
-  let charHeight = rect.height / screenHeight;
-  
-  // Calcula a posição exata para centralizar a imagem de impacto
-  let impactX = rect.left + (enemyColumn + enemyWidth / 2) * charWidth;
-  let impactY = rect.top + (enemyRow + enemyHeight / 2) * charHeight;
-  
-  // Cria dinamicamente um novo elemento <img> para o impacto
-  let impactEl = document.createElement("img");
-  impactEl.src = "impact.png";
-  impactEl.alt = "Impacto";
-  impactEl.style.position = "absolute";
-  impactEl.style.left = impactX + "px";
-  impactEl.style.top = impactY + "px";
-  impactEl.style.transform = "translate(-50%, -50%)";
-  impactEl.style.width = "50px"; // ajuste conforme necessário
-  impactEl.style.zIndex = "3";
-  impactEl.style.pointerEvents = "none";
-  
-  // Adiciona o elemento ao container do jogo
-  document.getElementById("game-container").appendChild(impactEl);
-  
-  // Remove a imagem após 200ms (ou o tempo que achar adequado)
-  setTimeout(() => {
-    impactEl.remove();
-  }, 200);
-}
+  <script>
+    // Detecta o modo de jogo pela URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const gameMode = urlParams.get('mode') || 'pc';
+    
+    // Exibe os controles touch se o modo for 'touch'
+    if (gameMode === 'touch') {
+      document.getElementById('touch-controls').style.display = 'block';
+    }
+    
+    //////////////////////////////
+    // Código do Jogo (Parte Principal)
+    //////////////////////////////
+    // Aqui fica todo o código do jogo (renderização, movimentação, disparos, etc.)
+    // Vou assumir que você já tem essa parte implementada conforme os códigos anteriores.
+    
+    // Exemplo de variáveis e funções do jogo:
+    let playerX = 14.7, playerY = 5.09, playerA = 0;
+    const FOV = Math.PI / 4, depth = 16.0;
+    const screenWidth = 120, screenHeight = 40;
+    let playerHealth = 100, playerAmmo = 30, gameOver = false;
+    let currentWeapon = "pistol";
+    const keys = {};  // Objeto que controla as teclas pressionadas
+    
+    // Eventos de teclado (para PC)
+    window.addEventListener("keydown", (e) => {
+      keys[e.key] = true;
+      // Troca de arma
+      if (e.key === "1") { currentWeapon = "pistol"; document.getElementById("weapon").src = "weapon.png"; }
+      else if (e.key === "2") { currentWeapon = "shotgun"; document.getElementById("weapon").src = "shotgun.png"; }
+      else if (e.key === "3") { currentWeapon = "bfg"; document.getElementById("weapon").src = "bfg.png"; }
+      // Reinicia se game over e "r" é pressionado
+      if (gameOver && e.key.toLowerCase() === "r") { location.reload(); }
+      // Disparo
+      if (e.key === " " && !gameOver) {
+        if (playerAmmo > 0) {
+          shootCurrentWeapon();
+          playerAmmo--;
+        }
+      }
+    });
+    
+    window.addEventListener("keyup", (e) => { keys[e.key] = false; });
+    
+    // Funções de disparo (exemplo)
+    function shootCurrentWeapon() {
+      // Lógica de disparo de acordo com currentWeapon...
+      // Exemplo para pistol:
+      const pistolSound = document.getElementById("pistolSound");
+      pistolSound.currentTime = 0;
+      pistolSound.play();
+      // Adicione aqui a criação de projéteis, etc.
+    }
+    
+    // ... (restante do código do jogo, como renderização via raycasting, movimentação, inimigos, etc.)
+    
+    //////////////////////////////
+    // Adicionando Controles para Touch
+    //////////////////////////////
+    if (gameMode === 'touch') {
+      // Função auxiliar para adicionar eventos touch e mouse
+      function addTouchControl(buttonId, keyValue) {
+        const btn = document.getElementById(buttonId);
+        if (!btn) return;
+        btn.addEventListener("touchstart", (e) => {
+          keys[keyValue] = true;
+          e.preventDefault();
+        });
+        btn.addEventListener("mousedown", (e) => {
+          keys[keyValue] = true;
+          e.preventDefault();
+        });
+        btn.addEventListener("touchend", (e) => {
+          keys[keyValue] = false;
+          e.preventDefault();
+        });
+        btn.addEventListener("mouseup", (e) => {
+          keys[keyValue] = false;
+          e.preventDefault();
+        });
+      }
+      
+      // Mapeia os botões do D-Pad para os movimentos (w, a, s, d)
+      addTouchControl("btn-up", "w");
+      addTouchControl("btn-down", "s");
+      addTouchControl("btn-left", "a");
+      addTouchControl("btn-right", "d");
+      
+      // Botão de disparo mapeado para a tecla espaço (" ")
+      const shootBtn = document.getElementById("btn-shoot");
+      if (shootBtn) {
+        shootBtn.addEventListener("touchstart", (e) => { keys[" "] = true; e.preventDefault(); });
+        shootBtn.addEventListener("mousedown", (e) => { keys[" "] = true; e.preventDefault(); });
+        shootBtn.addEventListener("touchend", (e) => { keys[" "] = false; e.preventDefault(); });
+        shootBtn.addEventListener("mouseup", (e) => { keys[" "] = false; e.preventDefault(); });
+      }
+    }
+    
+    // Exemplo de loop do jogo (muito simplificado)
+    let prevTime = Date.now();
+    function gameLoop() {
+      const currentTime = Date.now();
+      const elapsedTime = (currentTime - prevTime) / 1000.0;
+      prevTime = currentTime;
+      
+      // Atualiza a lógica do jogador (movimento, colisões, etc.)
+      if (!gameOver) {
+        if (keys['w']) { playerY -= 5 * elapsedTime; }
+        if (keys['s']) { playerY += 5 * elapsedTime; }
+        if (keys['a']) { playerA -= 2 * elapsedTime; }
+        if (keys['d']) { playerA += 2 * elapsedTime; }
+        // Outros comportamentos...
+      }
+      
+      // Atualiza o HUD
+      const hudEl = document.getElementById("hud");
+      hudEl.innerText = `Vida: ${playerHealth}    Munição: ${playerAmmo}    Arma: ${currentWeapon.toUpperCase()}`;
+      if (gameOver) {
+        hudEl.innerText += "\nGAME OVER – Pressione R para reiniciar";
+      }
+      
+      // Atualiza a renderização (raycasting, inimigos, etc.)
+      // ...
+      
+      requestAnimationFrame(gameLoop);
+    }
+    
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>

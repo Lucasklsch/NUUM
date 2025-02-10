@@ -169,19 +169,9 @@
     let playerHealth = 100, playerAmmo = 30, gameOver = false;
     let currentWeapon = "pistol";
     
-   // Número de inimigos
-const enemyCount = 5;
+  // Número de inimigos
+const enemyCount = 2;
 const enemies = [];
-
-// Função para gerar posição aleatória no chão
-function getRandomFloor(map) {
-  let x, y;
-  do {
-    x = Math.floor(Math.random() * map[0].length);
-    y = Math.floor(Math.random() * map.length);
-  } while (map[y][x] !== 0); // Garante que a posição seja um espaço vazio
-  return { x, y };
-}
 
 // Criando os inimigos em posições aleatórias
 for (let i = 0; i < enemyCount; i++) {
@@ -193,9 +183,10 @@ for (let i = 0; i < enemyCount; i++) {
     attackTimer: 0,
   });
 }
+console.log("Inimigos gerados:", enemies); // Debug
 
 // Criando imagens para os monstros
-  enemies.forEach((enemy, index) => {
+enemies.forEach((enemy, index) => {
   const enemyEl = document.createElement("img");
   enemyEl.src = "monster.png"; // Caminho da imagem do monstro
   enemyEl.alt = "Monstro";
@@ -204,6 +195,9 @@ for (let i = 0; i < enemyCount; i++) {
   enemyEl.style.zIndex = "3";
   enemyEl.style.pointerEvents = "none";
   enemyEl.id = `enemy-${index}`;
+
+  enemyEl.onerror = () => console.error(`Erro ao carregar ${enemyEl.src}`); // Debug
+
   document.getElementById("game-container").appendChild(enemyEl);
 });
 
@@ -213,7 +207,7 @@ function updateEnemies() {
     const enemyEl = document.getElementById(`enemy-${index}`);
 
     if (!enemy.alive) {
-      enemyEl.style.display = "none"; // Esconde se estiver morto
+      enemyEl.style.display = "none";
       return;
     }
 
@@ -223,8 +217,10 @@ function updateEnemies() {
     let enemyAngle = Math.atan2(dx, dy) - playerA;
     let enemyPos = (enemyAngle + FOV / 2.0) / FOV;
 
+    console.log(`Inimigo ${index}: Pos(${enemy.x.toFixed(2)}, ${enemy.y.toFixed(2)}) - Distância: ${distance.toFixed(2)}`); // Debug
+
     if (enemyPos < 0 || enemyPos > 1 || distance > depth) {
-      enemyEl.style.display = "none"; // Esconde se estiver fora da tela
+      enemyEl.style.display = "none";
       return;
     }
 
@@ -237,15 +233,13 @@ function updateEnemies() {
       enemyEl.src = "monster.png";
     }
 
-    // Calcula a posição na tela
     let screenEl = document.getElementById("screen");
     let rect = screenEl.getBoundingClientRect();
     
-    let enemySize = Math.max(40, 200 / distance); // Ajusta o tamanho conforme a distância
+    let enemySize = Math.max(40, 200 / distance);
     let enemyX = rect.left + enemyPos * rect.width - enemySize / 2;
     let enemyY = rect.top + rect.height / 2 - enemySize / 2;
 
-    // Animação de balanço
     let offsetY = Math.sin(Date.now() / 200) * 5;
 
     enemyEl.style.left = `${enemyX}px`;
@@ -260,6 +254,7 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 gameLoop();
+;
 
 // Pickups (munição e vida)
 const pickups = [];

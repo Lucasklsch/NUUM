@@ -38,7 +38,8 @@
       margin-bottom: 30px;
     }
     
-    a.button {
+    .button {
+      display: inline-block;
       text-decoration: none;
       color: #000;
       background-color: #0F0;
@@ -46,9 +47,10 @@
       font-size: 1.5rem;
       border: 2px solid #0F0;
       transition: background-color 0.3s ease, color 0.3s ease;
+      margin: 10px;
     }
     
-    a.button:hover {
+    .button:hover {
       background-color: #000;
       color: #0F0;
     }
@@ -57,8 +59,11 @@
 <body>
   <div class="menu-container">
     <h1>Nuum Game</h1>
-    <p>Bem-vindo ao universo Nuum! Prepare-se para uma experiência retrô.</p>
-    <a class="button" href="nuum.html">Jogar</a>
+    <p>Escolha seu modo de jogo:</p>
+    <!-- Link para o jogo em modo PC -->
+    <a class="button" href="nuum.html?mode=pc">Jogar no PC</a>
+    <!-- Link para o jogo em modo Touch Screen -->
+    <a class="button" href="nuum.html?mode=touch">Jogar no Touch Screen</a>
   </div>
 </body>
 </html>

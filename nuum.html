@@ -170,7 +170,7 @@
     let currentWeapon = "pistol";
     
    // Número de inimigos
-const enemyCount = 2;
+const enemyCount = 5;
 const enemies = [];
 
 // Função para gerar posição aleatória no chão
@@ -195,7 +195,7 @@ for (let i = 0; i < enemyCount; i++) {
 }
 
 // Criando imagens para os monstros
-enemies.forEach((enemy, index) => {
+  enemies.forEach((enemy, index) => {
   const enemyEl = document.createElement("img");
   enemyEl.src = "monster.png"; // Caminho da imagem do monstro
   enemyEl.alt = "Monstro";

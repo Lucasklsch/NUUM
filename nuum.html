@@ -169,69 +169,112 @@
     let playerHealth = 100, playerAmmo = 30, gameOver = false;
     let currentWeapon = "pistol";
     
-    // Inimigos (posicionados aleatoriamente)
-    const enemyCount = 2;
-    const enemies = [];
-    // Criando imagens para os monstros
+   // Número de inimigos
+const enemyCount = 2;
+const enemies = [];
+
+// Função para gerar posição aleatória no chão
+function getRandomFloor(map) {
+  let x, y;
+  do {
+    x = Math.floor(Math.random() * map[0].length);
+    y = Math.floor(Math.random() * map.length);
+  } while (map[y][x] !== 0); // Garante que a posição seja um espaço vazio
+  return { x, y };
+}
+
+// Criando os inimigos em posições aleatórias
+for (let i = 0; i < enemyCount; i++) {
+  let enemyPos = getRandomFloor(map);
+  enemies.push({
+    x: enemyPos.x + 0.5,
+    y: enemyPos.y + 0.5,
+    alive: true,
+    attackTimer: 0,
+  });
+}
+
+// Criando imagens para os monstros
 enemies.forEach((enemy, index) => {
   const enemyEl = document.createElement("img");
   enemyEl.src = "monster.png"; // Caminho da imagem do monstro
   enemyEl.alt = "Monstro";
   enemyEl.style.position = "absolute";
-  enemyEl.style.width = "80px";  // Ajuste o tamanho conforme necessário
+  enemyEl.style.width = "80px";
   enemyEl.style.zIndex = "3";
   enemyEl.style.pointerEvents = "none";
   enemyEl.id = `enemy-${index}`;
   document.getElementById("game-container").appendChild(enemyEl);
 });
+
 // Atualiza a posição dos inimigos na tela
-enemies.forEach((enemy, index) => {
-  const enemyEl = document.getElementById(`enemy-${index}`);
+function updateEnemies() {
+  enemies.forEach((enemy, index) => {
+    const enemyEl = document.getElementById(`enemy-${index}`);
 
-  if (!enemy.alive) {
-    enemyEl.style.display = "none"; // Esconde se estiver morto
-    return;
-  }
-
-  let dx = enemy.x - playerX;
-  let dy = enemy.y - playerY;
-  let distance = Math.sqrt(dx * dx + dy * dy);
-  
-  let enemyAngle = Math.atan2(dx, dy) - playerA;
-  let enemyPos = (enemyAngle + FOV / 2.0) / FOV;
-
-  if (enemyPos < 0 || enemyPos > 1 || distance > depth) {
-    enemyEl.style.display = "none"; // Esconde se estiver fora da tela
-    return;
-  }
-
-  enemyEl.style.display = "block";
-
-  // Calcula a posição na tela
-  let screenEl = document.getElementById("screen");
-  let rect = screenEl.getBoundingClientRect();
-  let charWidth = rect.width / screenWidth;
-  let charHeight = rect.height / screenHeight;
-  
-  let enemySize = Math.max(40, 200 / distance); // Ajusta o tamanho conforme a distância
-  let enemyX = rect.left + enemyPos * rect.width - enemySize / 2;
-  let enemyY = rect.top + rect.height / 2 - enemySize / 2;
-  
-  enemyEl.style.left = `${enemyX}px`;
-  enemyEl.style.top = `${enemyY}px`;
-  enemyEl.style.width = `${enemySize}px`;
-});
-  // for (let i = 0; i < enemyCount; i++) {
-     // let enemyPos = getRandomFloor(map);
-      //enemies.push({ x: enemyPos.x + 0.5, y: enemyPos.y + 0.5, alive: true, attackTimer: 0 });
-    //}
-    // Pickups (munição e vida)
-    const pickups = [];
-    const pickupTypes = ["ammo", "health"];
-    for (let i = 0; i < 2; i++) {
-      let pickupPos = getRandomFloor(map);
-      pickups.push({ x: pickupPos.x + 0.5, y: pickupPos.y + 0.5, type: pickupTypes[i % pickupTypes.length], collected: false });
+    if (!enemy.alive) {
+      enemyEl.style.display = "none"; // Esconde se estiver morto
+      return;
     }
+
+    let dx = enemy.x - playerX;
+    let dy = enemy.y - playerY;
+    let distance = Math.sqrt(dx * dx + dy * dy);
+    let enemyAngle = Math.atan2(dx, dy) - playerA;
+    let enemyPos = (enemyAngle + FOV / 2.0) / FOV;
+
+    if (enemyPos < 0 || enemyPos > 1 || distance > depth) {
+      enemyEl.style.display = "none"; // Esconde se estiver fora da tela
+      return;
+    }
+
+    enemyEl.style.display = "block";
+
+    // Troca a imagem se estiver perto do jogador
+    if (distance < 1.5) {
+      enemyEl.src = "monster-attack.png";
+    } else {
+      enemyEl.src = "monster.png";
+    }
+
+    // Calcula a posição na tela
+    let screenEl = document.getElementById("screen");
+    let rect = screenEl.getBoundingClientRect();
+    
+    let enemySize = Math.max(40, 200 / distance); // Ajusta o tamanho conforme a distância
+    let enemyX = rect.left + enemyPos * rect.width - enemySize / 2;
+    let enemyY = rect.top + rect.height / 2 - enemySize / 2;
+
+    // Animação de balanço
+    let offsetY = Math.sin(Date.now() / 200) * 5;
+
+    enemyEl.style.left = `${enemyX}px`;
+    enemyEl.style.top = `${enemyY + offsetY}px`;
+    enemyEl.style.width = `${enemySize}px`;
+  });
+}
+
+// Loop de atualização
+function gameLoop() {
+  updateEnemies();
+  requestAnimationFrame(gameLoop);
+}
+gameLoop();
+
+// Pickups (munição e vida)
+const pickups = [];
+const pickupTypes = ["ammo", "health"];
+
+for (let i = 0; i < 2; i++) {
+  let pickupPos = getRandomFloor(map);
+  pickups.push({
+    x: pickupPos.x + 0.5,
+    y: pickupPos.y + 0.5,
+    type: pickupTypes[i % pickupTypes.length],
+    collected: false,
+  });
+}
+
     // Balas
     const bullets = [];
     

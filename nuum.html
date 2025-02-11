@@ -136,7 +136,7 @@
             row += "#";
           } else {
             // 30% de chance de parede, 70% de chão
-            row += (Math.random() < 0.3) ? "#" : ".";
+            row += (Math.random() < 0.2) ? "#" : ".";
           }
         }
         map.push(row);
@@ -164,12 +164,12 @@
     let playerA = 0;
     const FOV = Math.PI / 4;
     const depth = 16.0;
-    const screenWidth = 120, screenHeight = 40;
+    const screenWidth = 1024, screenHeight = 768;
     let playerHealth = 100, playerAmmo = 30, gameOver = false;
     let currentWeapon = "pistol";
     
     // Número de inimigos
-    const enemyCount = 2;
+    const enemyCount = 5;
     const enemies = [];
     
     // Criando os inimigos em posições aleatórias

@@ -10,10 +10,8 @@
       padding: 0;
     }
 
-    /* Corpo com imagem de fundo estilo Doom e efeito flash via pseudo-elemento */
     body {
       position: relative;
-      /* Substitua a URL abaixo pela sua imagem de fundo que capture aquela vibe de batalha sombria no estilo Doom */
       background: url('background.webp') no-repeat center center fixed;
       background-size: cover;
       font-family: 'Courier New', Courier, monospace;
@@ -26,7 +24,6 @@
       overflow: hidden;
     }
 
-    /* Pseudo-elemento para o efeito de flash, simulando o disparo de arma */
     body::before {
       content: '';
       position: fixed;
@@ -39,7 +36,6 @@
       animation: gunshotFlash 3s infinite;
     }
 
-    /* Animação de flash */
     @keyframes gunshotFlash {
   0%, 100% {
     background-color: transparent;
@@ -58,16 +54,14 @@
   }
 }
 
-    /* Container do menu com pulsação e fade-in */
     .menu-container {
       border: 3px solid #0F0;
       padding: 30px;
       border-radius: 8px;
-      /* Fundo semi-transparente pra suavizar e deixar o fundo de batalha à mostra */
       background-color: rgba(17, 17, 17, 0.9);
       box-shadow: 0 0 20px #0F0;
       position: relative;
-      z-index: 1; /* Garante que o menu fique acima do flash */
+      z-index: 1;
       animation: pulseBorder 2s infinite, fadeIn 1s ease-in;
     }
     
@@ -82,7 +76,6 @@
       to   { opacity: 1; }
     }
     
-    /* Efeito de glitch no título para aquele charme retrô */
     .menu-container h1 {
       font-size: 3rem;
       margin-bottom: 20px;
@@ -126,17 +119,13 @@
   </style>
 </head>
 <body>
-    <!-- Áudio de fundo: substitua 'sua-musica.mp3' pela URL ou caminho do seu arquivo de áudio -->
   <audio id="bg-music" autoplay loop style="display: none;">
     <source src="music.mp3" type="audio/mpeg">
-    Seu navegador não suporta o elemento de áudio.
   </audio>
   <div class="menu-container">
     <h1>Nuum Game</h1>
     <p>Escolha seu modo de jogo:</p>
-    <!-- Link para o jogo em modo PC -->
     <a class="button" href="nuum.html?mode=pc">Jogar no PC</a>
-    <!-- Link para o jogo em modo Touch Screen -->
     <a class="button" href="nuum.html?mode=touch">Jogar no Touch Screen</a>
   </div>
 </body>

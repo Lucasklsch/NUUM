@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Nuum Game - Procedural e Touch</title>
   <style>
-    /* ... (mesmo CSS anterior) ... */
+    /* Estilo geral com visual retro */
     body {
       background-color: black;
       color: white;
@@ -13,8 +13,138 @@
       text-align: center;
       overflow: hidden;
     }
-    /* Container, HUD, controles, etc. (mesmo que antes) */
-    /* [Mantém o CSS existente sem alterações] */
+    /* Container do jogo */
+    #game-container {
+      position: relative;
+      display: inline-block;
+      margin-top: 20px;
+    }
+    /* Área de renderização (ASCII) */
+    #screen {
+      z-index: 1;
+      white-space: pre;
+      margin: 0;
+      padding: 0;
+    }
+    /* Imagem da arma */
+    #weapon {
+      position: absolute;
+      bottom: -25%;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+      width: 300px;
+      pointer-events: none;
+    }
+    #weapon.firing {
+      transform: translateX(-50%) translateY(-10px);
+      transition: transform 0.1s;
+    }
+    /* Controles para touch screen */
+    /* Esses controles só serão exibidos quando o modo for "touch" */
+    #touch-controls {
+      display: none; /* Inicialmente oculto; exibido se mode=touch */
+    }
+    /* Layout flex para separar os controles de movimentação e de ação */
+    #touch-controls.fixed {
+      position: fixed;
+      bottom: 20px;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 20px;
+      z-index: 10;
+      user-select: none;
+    }
+    /* Controles de movimentação (à esquerda) */
+    #touch-movement {
+      /* Pode ajustar a posição e tamanho conforme necessário */
+    }
+    /* Layout do dpad */
+    #dpad {
+      display: grid;
+      grid-template-areas: 
+         ". up ."
+         "left . right"
+         ". down .";
+      grid-gap: 10px;
+    }
+    #dpad button {
+      background: #333;
+      border: 2px solid #0F0;
+      color: #0F0;
+      font-size: 1.2rem;
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+    }
+    /* Controles de ação (à direita) */
+    #touch-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    /* Seletor de armas */
+    #weapon-selector {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    #weapon-selector button {
+      background: #333;
+      border: 2px solid #0F0;
+      color: #0F0;
+      font-size: 1rem;
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+    }
+    /* Destaque para a arma selecionada */
+    #weapon-selector button.active-weapon {
+      background: #0F0;
+      color: #000;
+    }
+    /* Botão de disparo */
+    #btn-shoot {
+      background: #0F0;
+      border: 2px solid #0F0;
+      color: #000;
+      font-size: 1.2rem;
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+    }
+    /* Oculta os elementos de áudio */
+    audio { display: none; }
+    
+    /* Novo HUD Estilizado */
+    #hud-container {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.85);
+      border: 2px solid yellow;
+      padding: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: yellow;
+      font-family: monospace;
+      width: 600px;
+      box-shadow: 0px 0px 10px yellow;
+      z-index: 10;
+    }
+    #status {
+      font-size: 18px;
+    }
+    #minimap {
+      width: 150px;
+      height: 150px;
+      background: #222;
+      border: 2px solid yellow;
+    }
   </style>
 </head>
 <body>
@@ -22,8 +152,9 @@
     <pre id="screen"></pre>
     <img id="weapon" src="weapon.png" alt="Arma">
     
-    <!-- Controles Touch -->
+    <!-- Controles Touch (visíveis apenas se o modo for "touch") -->
     <div id="touch-controls" class="fixed">
+      <!-- Controles de movimentação (à esquerda) -->
       <div id="touch-movement">
         <div id="dpad">
           <button id="btn-up" style="grid-area: up;">&#9650;</button>
@@ -32,6 +163,7 @@
           <button id="btn-down" style="grid-area: down;">&#9660;</button>
         </div>
       </div>
+      <!-- Controles de ação (à direita) -->
       <div id="touch-actions">
         <div id="weapon-selector">
           <button id="btn-pistol">Pistola</button>
@@ -42,47 +174,40 @@
       </div>
     </div>
     
-    <!-- Áudios -->
+    <!-- Elementos de áudio -->
     <audio id="pistolSound" src="pistol.wav"></audio>
     <audio id="shotgunSound" src="shotgun.wav"></audio>
     <audio id="bfgSound" src="bfg.wav"></audio>
     <audio id="walkSound" src="walk.wav" loop></audio>
   </div>
   
-  <!-- HUD -->
+  <!-- HUD Estilizado com Status e Minimapa -->
   <div id="hud-container">
     <div id="status">Vida: 100  Munição: 30  Arma: PISTOLA</div>
     <canvas id="minimap" width="150" height="150"></canvas>
   </div>
   
   <script>
-    ////////////////////////////////
-    // FUNÇÃO: Normaliza ângulos
-    ////////////////////////////////
-    function normalizeAngle(angle) {
-      while(angle < -Math.PI) angle += 2 * Math.PI;
-      while(angle > Math.PI) angle -= 2 * Math.PI;
-      return angle;
-    }
-    
-    // Detecta o modo de jogo via URL (ex.: nuum.html?mode=touch)
+    // Detecta o modo de jogo pela URL (ex: nuum.html?mode=touch)
     const urlParams = new URLSearchParams(window.location.search);
     const gameMode = urlParams.get('mode') || 'pc';
     if (gameMode === 'touch') {
       document.getElementById('touch-controls').style.display = 'flex';
     }
     
-    ////////////////////////////////
+    ///////////////////////////////////
     // Geração Procedural do Mapa
-    ////////////////////////////////
+    ///////////////////////////////////
     function generateMap(width, height) {
       let map = [];
       for (let y = 0; y < height; y++) {
         let row = "";
         for (let x = 0; x < width; x++) {
+          // Paredes nas bordas
           if (y === 0 || y === height - 1 || x === 0 || x === width - 1) {
             row += "#";
           } else {
+            // 20% de chance de parede, 80% de chão
             row += (Math.random() < 0.2) ? "#" : ".";
           }
         }
@@ -102,9 +227,9 @@
     let map = generateMap(mapWidth, mapHeight);
     console.log("Mapa Gerado:\n" + map.join("\n"));
     
-    ////////////////////////////////
+    ///////////////////////////////////
     // Variáveis do Jogo
-    ////////////////////////////////
+    ///////////////////////////////////
     let playerPos = getRandomFloor(map);
     let playerX = playerPos.x + 0.5;
     let playerY = playerPos.y + 0.5;
@@ -129,7 +254,7 @@
     }
     console.log("Inimigos gerados:", enemies);
     
-    // Cria imagens para os inimigos
+    // Cria imagens para os monstros
     enemies.forEach((enemy, index) => {
       const enemyEl = document.createElement("img");
       enemyEl.src = "monster.png";
@@ -142,9 +267,11 @@
       document.getElementById("game-container").appendChild(enemyEl);
     });
     
-    ////////////////////////////////
-    // Atualização dos Inimigos (Imagens)
-    ////////////////////////////////
+    ///////////////////////////////////
+    // Função para atualizar a posição dos inimigos (imagens)
+    ///////////////////////////////////
+    // Agora, a atualização dos inimigos é feita após o cálculo do raycasting (zBuffer)
+    // para que seja possível ocultar os inimigos que estão atrás de paredes.
     function updateEnemies() {
       enemies.forEach((enemy, index) => {
         const enemyEl = document.getElementById(`enemy-${index}`);
@@ -155,21 +282,28 @@
         let dx = enemy.x - playerX;
         let dy = enemy.y - playerY;
         let distance = Math.sqrt(dx * dx + dy * dy);
-        // Normaliza o ângulo entre o jogador e o inimigo
-        let enemyAngle = normalizeAngle(Math.atan2(dx, dy) - playerA);
-        let enemyPos = (enemyAngle + FOV / 2) / FOV;
+        let enemyAngle = Math.atan2(dx, dy) - playerA;
+        let enemyPos = (enemyAngle + FOV / 2.0) / FOV;
         let columnIndex = Math.floor(enemyPos * screenWidth);
-        // Se o inimigo estiver fora do FOV, muito distante ou atrás da parede (com margem), não renderiza
-        if (enemyPos < 0 || enemyPos > 1 || distance > depth ||
-            (columnIndex >= 0 && columnIndex < screenWidth && distance > zBuffer[columnIndex] + 0.3)) {
+        // Se o inimigo não está na FOV, está muito distante ou se sua distância
+        // for maior que a da parede nessa coluna (mais uma margem), ele é ocultado.
+        if (enemyPos < 0 || enemyPos > 1 || distance > depth || 
+            (zBuffer[columnIndex] !== undefined && distance > zBuffer[columnIndex] + 0.2)) {
           enemyEl.style.display = "none";
           return;
         }
         enemyEl.style.display = "block";
+        // Adiciona um efeito para facilitar a visualização
         enemyEl.style.filter = "drop-shadow(0 0 5px red)";
-        enemyEl.src = (distance < 1.5) ? "monster-attack.png" : "monster.png";
+        // Troca a imagem se o inimigo estiver muito próximo
+        if (distance < 1.5) {
+          enemyEl.src = "monster-attack.png";
+        } else {
+          enemyEl.src = "monster.png";
+        }
         let screenEl = document.getElementById("screen");
         let rect = screenEl.getBoundingClientRect();
+        // Aumenta o tamanho mínimo para 60 (antes era 40)
         let enemySize = Math.max(60, 200 / distance);
         let enemyX = rect.left + enemyPos * rect.width - enemySize / 2;
         let enemyY = rect.top + rect.height / 2 - enemySize / 2;
@@ -180,9 +314,9 @@
       });
     }
     
-    ////////////////////////////////
-    // Pickups, Balas e Controles (mesmos de antes)
-    ////////////////////////////////
+    ///////////////////////////////////
+    // Pickups (munição e vida)
+    ///////////////////////////////////
     const pickups = [];
     const pickupTypes = ["ammo", "health"];
     for (let i = 0; i < 2; i++) {
@@ -194,7 +328,11 @@
         collected: false,
       });
     }
+    
+    // Balas
     const bullets = [];
+    
+    // Controles via Teclado (PC)
     const keys = {};
     window.addEventListener("keydown", (e) => {
       keys[e.key] = true;
@@ -222,30 +360,53 @@
       keys[e.key] = false;
     });
     
+    // Controles Touch (para mobile)
     if (gameMode === 'touch') {
       function addTouchControl(buttonId, keyValue) {
         const btn = document.getElementById(buttonId);
         if (!btn) return;
-        btn.addEventListener("touchstart", (e) => { keys[keyValue] = true; e.preventDefault(); });
-        btn.addEventListener("mousedown", (e) => { keys[keyValue] = true; e.preventDefault(); });
-        btn.addEventListener("touchend", (e) => { keys[keyValue] = false; e.preventDefault(); });
-        btn.addEventListener("mouseup", (e) => { keys[keyValue] = false; e.preventDefault(); });
+        btn.addEventListener("touchstart", (e) => {
+          keys[keyValue] = true;
+          e.preventDefault();
+        });
+        btn.addEventListener("mousedown", (e) => {
+          keys[keyValue] = true;
+          e.preventDefault();
+        });
+        btn.addEventListener("touchend", (e) => {
+          keys[keyValue] = false;
+          e.preventDefault();
+        });
+        btn.addEventListener("mouseup", (e) => {
+          keys[keyValue] = false;
+          e.preventDefault();
+        });
       }
       addTouchControl("btn-up", "w");
       addTouchControl("btn-down", "s");
       addTouchControl("btn-left", "a");
       addTouchControl("btn-right", "d");
+      
+      // Botão de disparo: dispara ao tocar ou clicar
       const shootBtn = document.getElementById("btn-shoot");
       if (shootBtn) {
         shootBtn.addEventListener("touchstart", (e) => {
-          if (!gameOver && playerAmmo > 0) { shootCurrentWeapon(); playerAmmo--; }
+          if (!gameOver && playerAmmo > 0) {
+            shootCurrentWeapon();
+            playerAmmo--;
+          }
           e.preventDefault();
         });
         shootBtn.addEventListener("mousedown", (e) => {
-          if (!gameOver && playerAmmo > 0) { shootCurrentWeapon(); playerAmmo--; }
+          if (!gameOver && playerAmmo > 0) {
+            shootCurrentWeapon();
+            playerAmmo--;
+          }
           e.preventDefault();
         });
       }
+      
+      // Botões de troca de arma
       const btnPistol = document.getElementById("btn-pistol");
       const btnShotgun = document.getElementById("btn-shotgun");
       const btnBFG = document.getElementById("btn-bfg");
@@ -287,25 +448,34 @@
           e.preventDefault();
         });
       }
+      // Atualiza o destaque do botão de arma selecionada
       function updateWeaponButtonStyles(activeButtonId) {
         ["btn-pistol", "btn-shotgun", "btn-bfg"].forEach(id => {
           const btn = document.getElementById(id);
           if (btn) {
-            if (id === activeButtonId) btn.classList.add("active-weapon");
-            else btn.classList.remove("active-weapon");
+            if (id === activeButtonId) {
+              btn.classList.add("active-weapon");
+            } else {
+              btn.classList.remove("active-weapon");
+            }
           }
         });
       }
+      // Inicializa com a pistola selecionada
       updateWeaponButtonStyles("btn-pistol");
     }
     
-    ////////////////////////////////
+    ///////////////////////////////////
     // Funções de Disparo
-    ////////////////////////////////
+    ///////////////////////////////////
     function shootCurrentWeapon() {
-      if (currentWeapon === "pistol") shootPistol();
-      else if (currentWeapon === "shotgun") shootShotgun();
-      else if (currentWeapon === "bfg") shootBFG();
+      if (currentWeapon === "pistol") {
+        shootPistol();
+      } else if (currentWeapon === "shotgun") {
+        shootShotgun();
+      } else if (currentWeapon === "bfg") {
+        shootBFG();
+      }
     }
     function shootPistol() {
       const pistolSound = document.getElementById("pistolSound");
@@ -314,7 +484,12 @@
       const weaponEl = document.getElementById("weapon");
       weaponEl.classList.add("firing");
       setTimeout(() => { weaponEl.classList.remove("firing"); }, 100);
-      bullets.push({ x: playerX, y: playerY, dx: Math.sin(playerA), dy: Math.cos(playerA) });
+      bullets.push({
+        x: playerX,
+        y: playerY,
+        dx: Math.sin(playerA),
+        dy: Math.cos(playerA)
+      });
     }
     function shootShotgun() {
       const shotgunSound = document.getElementById("shotgunSound");
@@ -325,7 +500,12 @@
       setTimeout(() => { weaponEl.classList.remove("firing"); }, 100);
       const offsets = [-0.1, -0.05, 0, 0.05, 0.1];
       offsets.forEach(offset => {
-        bullets.push({ x: playerX, y: playerY, dx: Math.sin(playerA + offset), dy: Math.cos(playerA + offset) });
+        bullets.push({
+          x: playerX,
+          y: playerY,
+          dx: Math.sin(playerA + offset),
+          dy: Math.cos(playerA + offset)
+        });
       });
     }
     function shootBFG() {
@@ -340,7 +520,7 @@
         let dx = enemy.x - playerX;
         let dy = enemy.y - playerY;
         let distance = Math.sqrt(dx * dx + dy * dy);
-        let enemyAngle = normalizeAngle(Math.atan2(dx, dy) - playerA);
+        let enemyAngle = Math.atan2(dx, dy) - playerA;
         if (Math.abs(enemyAngle) < 0.05 && distance < depth) {
           enemy.alive = false;
           showImpactAtEnemy(enemy);
@@ -348,14 +528,14 @@
       });
     }
     
-    ////////////////////////////////
-    // Efeito de Impacto
-    ////////////////////////////////
+    ///////////////////////////////////
+    // Efeito de Impacto (Imagem Impact)
+    ///////////////////////////////////
     function showImpactAtEnemy(enemy) {
       let dx = enemy.x - playerX;
       let dy = enemy.y - playerY;
       let distance = Math.sqrt(dx * dx + dy * dy);
-      let enemyAngle = normalizeAngle(Math.atan2(dx, dy) - playerA);
+      let enemyAngle = Math.atan2(dx, dy) - playerA;
       let enemyPos = (enemyAngle + FOV / 2.0) / FOV;
       if (enemyPos < 0 || enemyPos > 1) return;
       let enemyHeight = Math.floor(screenHeight / distance);
@@ -382,18 +562,22 @@
       setTimeout(() => { impactEl.remove(); }, 200);
     }
     
-    ////////////////////////////////
-    // Pickups e Renderização ASCII
-    ////////////////////////////////
+    ///////////////////////////////////
+    // Pickups: Checa e Renderiza
+    ///////////////////////////////////
     function checkPickups() {
       pickups.forEach(pickup => {
         if (pickup.collected) return;
         let dx = pickup.x - playerX;
         let dy = pickup.y - playerY;
-        if (Math.sqrt(dx * dx + dy * dy) < 0.5) {
+        let dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 0.5) {
           pickup.collected = true;
-          if (pickup.type === "ammo") playerAmmo += 10;
-          else if (pickup.type === "health") playerHealth = Math.min(playerHealth + 20, 100);
+          if (pickup.type === "ammo") {
+            playerAmmo += 10;
+          } else if (pickup.type === "health") {
+            playerHealth = Math.min(playerHealth + 20, 100);
+          }
         }
       });
     }
@@ -403,7 +587,7 @@
         let dx = pickup.x - playerX;
         let dy = pickup.y - playerY;
         let distance = Math.sqrt(dx * dx + dy * dy);
-        let pickupAngle = normalizeAngle(Math.atan2(dx, dy) - playerA);
+        let pickupAngle = Math.atan2(dx, dy) - playerA;
         let pickupPos = (pickupAngle + FOV / 2.0) / FOV;
         if (pickupPos < 0 || pickupPos > 1 || distance > depth) return;
         let symbol = (pickup.type === "ammo") ? "A" : "H";
@@ -415,31 +599,42 @@
       });
     }
     
+    ///////////////////////////////////
+    // Função para atualizar o HUD
+    ///////////////////////////////////
     function updateHUD() {
-      document.getElementById("status").innerText = `Vida: ${playerHealth}  Munição: ${playerAmmo}  Arma: ${currentWeapon.toUpperCase()}`;
+      const statusEl = document.getElementById("status");
+      statusEl.innerText = `Vida: ${playerHealth}  Munição: ${playerAmmo}  Arma: ${currentWeapon.toUpperCase()}`;
     }
     
-    ////////////////////////////////
-    // Minimapa Rotativo
-    ////////////////////////////////
+    ///////////////////////////////////
+    // Minimapa rotativo
+    ///////////////////////////////////
     function drawMinimap() {
       const minimap = document.getElementById("minimap");
       const ctx = minimap.getContext("2d");
+      // Limpa o canvas
       ctx.clearRect(0, 0, minimap.width, minimap.height);
+      // Salva o contexto e centra o canvas
       ctx.save();
       const centerX = minimap.width / 2;
       const centerY = minimap.height / 2;
       ctx.translate(centerX, centerY);
+      // Rotaciona para que a direção do jogador (playerA) aponte para cima
       ctx.rotate(-playerA);
+      // Define o tamanho de cada célula (a partir das dimensões do mapa)
       const cellWidth = minimap.width / mapWidth;
       const cellHeight = minimap.height / mapHeight;
+      // Translada para que o jogador fique no centro
       ctx.translate(-playerX * cellWidth, -playerY * cellHeight);
+      // Desenha o mapa
       for (let y = 0; y < mapHeight; y++) {
         for (let x = 0; x < mapWidth; x++) {
           ctx.fillStyle = (map[y][x] === "#") ? "gray" : "black";
           ctx.fillRect(x * cellWidth, y * cellHeight, cellWidth, cellHeight);
         }
       }
+      // Desenha os inimigos
       enemies.forEach(enemy => {
         if (!enemy.alive) return;
         ctx.fillStyle = "red";
@@ -447,6 +642,7 @@
         ctx.arc(enemy.x * cellWidth, enemy.y * cellHeight, Math.min(cellWidth, cellHeight) / 2, 0, Math.PI * 2);
         ctx.fill();
       });
+      // Desenha o jogador (no centro)
       ctx.fillStyle = "lime";
       ctx.beginPath();
       ctx.arc(playerX * cellWidth, playerY * cellHeight, Math.min(cellWidth, cellHeight) / 2, 0, Math.PI * 2);
@@ -454,9 +650,9 @@
       ctx.restore();
     }
     
-    ////////////////////////////////
+    ///////////////////////////////////
     // Loop do Jogo e Raycasting
-    ////////////////////////////////
+    ///////////////////////////////////
     let prevTime = Date.now();
     let zBuffer = new Array(screenWidth).fill(0);
     function gameLoop() {
@@ -465,6 +661,7 @@
       prevTime = currentTime;
       
       if (!gameOver) {
+        // Movimentação
         if (keys['w'] || keys['W']) {
           playerX += Math.sin(playerA) * 5 * elapsedTime;
           playerY += Math.cos(playerA) * 5 * elapsedTime;
@@ -481,17 +678,22 @@
             playerY += Math.cos(playerA) * 5 * elapsedTime;
           }
         }
-        if (keys['a'] || keys['A']) playerA -= 2 * elapsedTime;
-        if (keys['d'] || keys['D']) playerA += 2 * elapsedTime;
+        if (keys['a'] || keys['A']) { playerA -= 2 * elapsedTime; }
+        if (keys['d'] || keys['D']) { playerA += 2 * elapsedTime; }
         
         const walkSound = document.getElementById("walkSound");
         if ((keys['w'] || keys['W'] || keys['s'] || keys['S']) && !gameOver) {
           if (walkSound.paused) walkSound.play();
         } else {
-          if (!walkSound.paused) { walkSound.pause(); walkSound.currentTime = 0; }
+          if (!walkSound.paused) {
+            walkSound.pause();
+            walkSound.currentTime = 0;
+          }
         }
         
         checkPickups();
+        
+        // Atualiza balas
         for (let i = bullets.length - 1; i >= 0; i--) {
           let bullet = bullets[i];
           bullet.x += bullet.dx * 10 * elapsedTime;
@@ -519,6 +721,7 @@
           }
         }
         
+        // Movimento dos inimigos e ataque
         enemies.forEach(enemy => {
           if (!enemy.alive) return;
           let dx = playerX - enemy.x;
@@ -561,7 +764,10 @@
           distanceToWall += 0.1;
           const testX = Math.floor(playerX + eyeX * distanceToWall);
           const testY = Math.floor(playerY + eyeY * distanceToWall);
-          if (testX < 0 || testX >= mapWidth || testY < 0 || testY >= mapHeight) {
+          if (
+            testX < 0 || testX >= mapWidth ||
+            testY < 0 || testY >= mapHeight
+          ) {
             hitWall = true;
             distanceToWall = depth;
           } else {
@@ -589,14 +795,15 @@
         const floor = screenHeight - ceiling;
         let column = "";
         for (let y = 0; y < screenHeight; y++) {
-          if (y < ceiling) column += " ";
-          else if (y >= ceiling && y <= floor) {
+          if (y < ceiling) {
+            column += " ";
+          } else if (y >= ceiling && y <= floor) {
             let shade = " ";
-            if (distanceToWall <= depth / 4.0) shade = "\u2588";
-            else if (distanceToWall < depth / 3.0) shade = "\u2593";
-            else if (distanceToWall < depth / 2.0) shade = "\u2592";
-            else if (distanceToWall < depth) shade = "\u2591";
-            else shade = " ";
+            if (distanceToWall <= depth / 4.0)       shade = "\u2588";
+            else if (distanceToWall < depth / 3.0)   shade = "\u2593";
+            else if (distanceToWall < depth / 2.0)   shade = "\u2592";
+            else if (distanceToWall < depth)         shade = "\u2591";
+            else                                   shade = " ";
             if (boundary) shade = " ";
             column += shade;
           } else {
@@ -613,13 +820,13 @@
         screenColumns[x] = column.split('');
       }
       
-      // Renderização dos inimigos no cenário ASCII (opcional)
+      // Renderiza inimigos no cenário ASCII (caso deseje visualizar também em "E")
       enemies.forEach(enemy => {
         if (!enemy.alive) return;
         const dx = enemy.x - playerX;
         const dy = enemy.y - playerY;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        let enemyAngle = normalizeAngle(Math.atan2(dx, dy) - playerA);
+        const enemyAngle = Math.atan2(dx, dy) - playerA;
         let enemyPos = (enemyAngle + FOV / 2.0) / FOV;
         if (enemyPos >= 0 && enemyPos < 1.0 && distance < depth) {
           const enemyHeight = Math.floor(screenHeight / distance);
@@ -641,13 +848,15 @@
         }
       });
       
-      // Renderiza pickups e balas
+      // Renderiza pickups
       renderPickups(screenColumns);
+      
+      // Renderiza balas
       bullets.forEach(bullet => {
         const dx = bullet.x - playerX;
         const dy = bullet.y - playerY;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        const bulletAngle = normalizeAngle(Math.atan2(dx, dy) - playerA);
+        const bulletAngle = Math.atan2(dx, dy) - playerA;
         let bulletPos = (bulletAngle + FOV / 2.0) / FOV;
         if (bulletPos >= 0 && bulletPos < 1.0 && distance < depth) {
           const bulletColumn = Math.floor(bulletPos * screenWidth);
@@ -668,7 +877,9 @@
       }
       document.getElementById("screen").innerText = finalScreen;
       
+      // Agora que o zBuffer foi calculado, atualiza as imagens dos inimigos
       updateEnemies();
+      
       updateHUD();
       drawMinimap();
       

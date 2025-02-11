@@ -41,15 +41,15 @@
     background-color: transparent;
   }
   /* Primeiro flash */
-  15%, 17% {
+  10%, 25% {
     background-color: rgba(255, 255, 255, 0.8);
   }
   /* Segundo flash */
-  45%, 47% {
+  25%, 50% {
     background-color: rgba(255, 255, 255, 0.8);
   }
   /* Terceiro flash */
-  75%, 77% {
+  50%, 75% {
     background-color: rgba(255, 255, 255, 0.8);
   }
 }
@@ -119,9 +119,24 @@
   </style>
 </head>
 <body>
-  <audio id="bg-music" autoplay loop style="display: none;">
-    <source src="music.mp3" type="audio/mpeg">
-  </audio>
+ <script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const audio = document.getElementById("bg-music");
+    
+    // Tenta tocar automaticamente
+    audio.play().catch(() => {
+      console.warn("Autoplay bloqueado! O usuário precisa interagir primeiro.");
+    });
+
+    // Se o usuário clicar na tela, começa a música
+    document.body.addEventListener("click", () => {
+      if (audio.paused) {
+        audio.play();
+      }
+    });
+  });
+</script>
+
   <div class="menu-container">
     <h1>Nuum Game</h1>
     <p>Escolha seu modo de jogo:</p>

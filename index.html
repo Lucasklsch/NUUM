@@ -41,13 +41,22 @@
 
     /* Animação de flash */
     @keyframes gunshotFlash {
-      0%, 95%, 100% {
-        background-color: transparent;
-      }
-      96%, 98% {
-        background-color: rgba(255, 255, 255, 0.8);
-      }
-    }
+  0%, 100% {
+    background-color: transparent;
+  }
+  /* Primeiro flash */
+  15%, 17% {
+    background-color: rgba(255, 255, 255, 0.8);
+  }
+  /* Segundo flash */
+  45%, 47% {
+    background-color: rgba(255, 255, 255, 0.8);
+  }
+  /* Terceiro flash */
+  75%, 77% {
+    background-color: rgba(255, 255, 255, 0.8);
+  }
+}
 
     /* Container do menu com pulsação e fade-in */
     .menu-container {

@@ -4,46 +4,61 @@
   <meta charset="UTF-8">
   <title>Menu - Nuum Game Retro</title>
   <style>
-    /* Estilo retrô: visual de terminal antigo */
-    body {
-      background-color: #000;
-      color: #0F0;
-      font-family: 'Courier New', Courier, monospace;
+    /* Reset básico */
+    html, body {
       margin: 0;
       padding: 0;
+    }
+
+    /* Corpo com imagem de fundo estilo Doom e efeito flash via pseudo-elemento */
+    body {
+      position: relative;
+      /* Substitua a URL abaixo pela sua imagem de fundo que capture aquela vibe de batalha sombria no estilo Doom */
+      background: url('background.webp') no-repeat center center fixed;
+      background-size: cover;
+      font-family: 'Courier New', Courier, monospace;
+      color: #0F0;
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
       text-align: center;
       overflow: hidden;
-      /* Animação de flash para simular disparo de arma */
+    }
+
+    /* Pseudo-elemento para o efeito de flash, simulando o disparo de arma */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
       animation: gunshotFlash 3s infinite;
     }
-    
-    /* Animação de flash com variações para simular o disparo */
+
+    /* Animação de flash */
     @keyframes gunshotFlash {
-      0% { background-color: #000; }
-      2% { background-color: #111; }
-      3% { background-color: #fff; }
-      4% { background-color: #111; }
-      5% { background-color: #000; }
-      95% { background-color: #000; }
-      97% { background-color: #111; }
-      98% { background-color: #fff; }
-      99% { background-color: #111; }
-      100% { background-color: #000; }
+      0%, 95%, 100% {
+        background-color: transparent;
+      }
+      96%, 98% {
+        background-color: rgba(255, 255, 255, 0.8);
+      }
     }
-    
-    /* Container com pulsação de brilho para aumentar a dramaticidade */
+
+    /* Container do menu com pulsação e fade-in */
     .menu-container {
       border: 3px solid #0F0;
       padding: 30px;
       border-radius: 8px;
-      background-color: #111;
+      /* Fundo semi-transparente pra suavizar e deixar o fundo de batalha à mostra */
+      background-color: rgba(17, 17, 17, 0.9);
       box-shadow: 0 0 20px #0F0;
       position: relative;
-      /* Duas animações: pulsação e fade in para a aparição suave */
+      z-index: 1; /* Garante que o menu fique acima do flash */
       animation: pulseBorder 2s infinite, fadeIn 1s ease-in;
     }
     
@@ -58,7 +73,7 @@
       to   { opacity: 1; }
     }
     
-    /* Efeito de glitch suave no título para aquele impacto visual retrô */
+    /* Efeito de glitch no título para aquele charme retrô */
     .menu-container h1 {
       font-size: 3rem;
       margin-bottom: 20px;

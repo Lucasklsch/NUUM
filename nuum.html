@@ -260,7 +260,6 @@
       enemyEl.src = "monster.png";
       enemyEl.alt = "Monstro";
       enemyEl.style.position = "absolute";
-      enemyEl.style.width = "80px";
       enemyEl.style.zIndex = "3";
       enemyEl.style.pointerEvents = "none";
       enemyEl.id = `enemy-${index}`;
@@ -268,7 +267,11 @@
       document.getElementById("game-container").appendChild(enemyEl);
     });
     
-    // Atualiza a posição dos inimigos (imagens)
+    ///////////////////////////////////
+    // Função para atualizar a posição dos inimigos (imagens)
+    ///////////////////////////////////
+    // Agora, a atualização dos inimigos é feita após o cálculo do raycasting (zBuffer)
+    // para que seja possível ocultar os inimigos que estão atrás de paredes.
     function updateEnemies() {
       enemies.forEach((enemy, index) => {
         const enemyEl = document.getElementById(`enemy-${index}`);
@@ -281,12 +284,18 @@
         let distance = Math.sqrt(dx * dx + dy * dy);
         let enemyAngle = Math.atan2(dx, dy) - playerA;
         let enemyPos = (enemyAngle + FOV / 2.0) / FOV;
-        if (enemyPos < 0 || enemyPos > 1 || distance > depth) {
+        let columnIndex = Math.floor(enemyPos * screenWidth);
+        // Se o inimigo não está na FOV, está muito distante ou se sua distância
+        // for maior que a da parede nessa coluna (mais uma margem), ele é ocultado.
+        if (enemyPos < 0 || enemyPos > 1 || distance > depth || 
+            (zBuffer[columnIndex] !== undefined && distance > zBuffer[columnIndex] + 0.2)) {
           enemyEl.style.display = "none";
           return;
         }
         enemyEl.style.display = "block";
-        // Troca de imagem se o inimigo estiver próximo
+        // Adiciona um efeito para facilitar a visualização
+        enemyEl.style.filter = "drop-shadow(0 0 5px red)";
+        // Troca a imagem se o inimigo estiver muito próximo
         if (distance < 1.5) {
           enemyEl.src = "monster-attack.png";
         } else {
@@ -294,7 +303,8 @@
         }
         let screenEl = document.getElementById("screen");
         let rect = screenEl.getBoundingClientRect();
-        let enemySize = Math.max(40, 200 / distance);
+        // Aumenta o tamanho mínimo para 60 (antes era 40)
+        let enemySize = Math.max(60, 200 / distance);
         let enemyX = rect.left + enemyPos * rect.width - enemySize / 2;
         let enemyY = rect.top + rect.height / 2 - enemySize / 2;
         let offsetY = Math.sin(Date.now() / 200) * 5;
@@ -352,7 +362,6 @@
     
     // Controles Touch (para mobile)
     if (gameMode === 'touch') {
-      // Função auxiliar para controles de movimentação (dpad)
       function addTouchControl(buttonId, keyValue) {
         const btn = document.getElementById(buttonId);
         if (!btn) return;
@@ -439,7 +448,7 @@
           e.preventDefault();
         });
       }
-      // Função para atualizar o destaque do botão de arma selecionada
+      // Atualiza o destaque do botão de arma selecionada
       function updateWeaponButtonStyles(activeButtonId) {
         ["btn-pistol", "btn-shotgun", "btn-bfg"].forEach(id => {
           const btn = document.getElementById(id);
@@ -591,34 +600,41 @@
     }
     
     ///////////////////////////////////
-    // Funções do HUD e Minimapa
+    // Função para atualizar o HUD
     ///////////////////////////////////
     function updateHUD() {
       const statusEl = document.getElementById("status");
       statusEl.innerText = `Vida: ${playerHealth}  Munição: ${playerAmmo}  Arma: ${currentWeapon.toUpperCase()}`;
     }
     
+    ///////////////////////////////////
+    // Minimapa rotativo
+    ///////////////////////////////////
     function drawMinimap() {
       const minimap = document.getElementById("minimap");
       const ctx = minimap.getContext("2d");
+      // Limpa o canvas
+      ctx.clearRect(0, 0, minimap.width, minimap.height);
+      // Salva o contexto e centra o canvas
+      ctx.save();
+      const centerX = minimap.width / 2;
+      const centerY = minimap.height / 2;
+      ctx.translate(centerX, centerY);
+      // Rotaciona para que a direção do jogador (playerA) aponte para cima
+      ctx.rotate(-playerA);
+      // Define o tamanho de cada célula (a partir das dimensões do mapa)
       const cellWidth = minimap.width / mapWidth;
       const cellHeight = minimap.height / mapHeight;
-      ctx.clearRect(0, 0, minimap.width, minimap.height);
+      // Translada para que o jogador fique no centro
+      ctx.translate(-playerX * cellWidth, -playerY * cellHeight);
+      // Desenha o mapa
       for (let y = 0; y < mapHeight; y++) {
         for (let x = 0; x < mapWidth; x++) {
-          if (map[y][x] === "#") {
-            ctx.fillStyle = "gray";
-            ctx.fillRect(x * cellWidth, y * cellHeight, cellWidth, cellHeight);
-          } else {
-            ctx.fillStyle = "black";
-            ctx.fillRect(x * cellWidth, y * cellHeight, cellWidth, cellHeight);
-          }
+          ctx.fillStyle = (map[y][x] === "#") ? "gray" : "black";
+          ctx.fillRect(x * cellWidth, y * cellHeight, cellWidth, cellHeight);
         }
       }
-      ctx.fillStyle = "lime";
-      ctx.beginPath();
-      ctx.arc(playerX * cellWidth, playerY * cellHeight, Math.min(cellWidth, cellHeight) / 2, 0, Math.PI * 2);
-      ctx.fill();
+      // Desenha os inimigos
       enemies.forEach(enemy => {
         if (!enemy.alive) return;
         ctx.fillStyle = "red";
@@ -626,6 +642,12 @@
         ctx.arc(enemy.x * cellWidth, enemy.y * cellHeight, Math.min(cellWidth, cellHeight) / 2, 0, Math.PI * 2);
         ctx.fill();
       });
+      // Desenha o jogador (no centro)
+      ctx.fillStyle = "lime";
+      ctx.beginPath();
+      ctx.arc(playerX * cellWidth, playerY * cellHeight, Math.min(cellWidth, cellHeight) / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     }
     
     ///////////////////////////////////
@@ -634,13 +656,12 @@
     let prevTime = Date.now();
     let zBuffer = new Array(screenWidth).fill(0);
     function gameLoop() {
-      updateEnemies();
-      
       const currentTime = Date.now();
       const elapsedTime = (currentTime - prevTime) / 1000.0;
       prevTime = currentTime;
       
       if (!gameOver) {
+        // Movimentação
         if (keys['w'] || keys['W']) {
           playerX += Math.sin(playerA) * 5 * elapsedTime;
           playerY += Math.cos(playerA) * 5 * elapsedTime;
@@ -672,6 +693,7 @@
         
         checkPickups();
         
+        // Atualiza balas
         for (let i = bullets.length - 1; i >= 0; i--) {
           let bullet = bullets[i];
           bullet.x += bullet.dx * 10 * elapsedTime;
@@ -699,6 +721,7 @@
           }
         }
         
+        // Movimento dos inimigos e ataque
         enemies.forEach(enemy => {
           if (!enemy.alive) return;
           let dx = playerX - enemy.x;
@@ -723,12 +746,12 @@
         
         if (playerHealth <= 0) {
           gameOver = true;
-          const walkSound = document.getElementById("walkSound");
           walkSound.pause();
           walkSound.currentTime = 0;
         }
       }
       
+      // Raycasting e renderização do cenário ASCII
       let screenColumns = new Array(screenWidth);
       for (let x = 0; x < screenWidth; x++) {
         const rayAngle = (playerA - FOV / 2.0) + (x / screenWidth) * FOV;
@@ -797,7 +820,7 @@
         screenColumns[x] = column.split('');
       }
       
-      // Renderiza inimigos no ASCII
+      // Renderiza inimigos no cenário ASCII (caso deseje visualizar também em "E")
       enemies.forEach(enemy => {
         if (!enemy.alive) return;
         const dx = enemy.x - playerX;
@@ -854,52 +877,15 @@
       }
       document.getElementById("screen").innerText = finalScreen;
       
+      // Agora que o zBuffer foi calculado, atualiza as imagens dos inimigos
+      updateEnemies();
+      
       updateHUD();
       drawMinimap();
       
       requestAnimationFrame(gameLoop);
     }
     requestAnimationFrame(gameLoop);
-    
-    ///////////////////////////////////
-    // Funções do HUD e Minimapa (duplicadas para compatibilidade)
-    ///////////////////////////////////
-    function updateHUD() {
-      const statusEl = document.getElementById("status");
-      statusEl.innerText = `Vida: ${playerHealth}  Munição: ${playerAmmo}  Arma: ${currentWeapon.toUpperCase()}`;
-    }
-    
-    function drawMinimap() {
-      const minimap = document.getElementById("minimap");
-      const ctx = minimap.getContext("2d");
-      const cellWidth = minimap.width / mapWidth;
-      const cellHeight = minimap.height / mapHeight;
-      ctx.clearRect(0, 0, minimap.width, minimap.height);
-      for (let y = 0; y < mapHeight; y++) {
-        for (let x = 0; x < mapWidth; x++) {
-          if (map[y][x] === "#") {
-            ctx.fillStyle = "gray";
-            ctx.fillRect(x * cellWidth, y * cellHeight, cellWidth, cellHeight);
-          } else {
-            ctx.fillStyle = "black";
-            ctx.fillRect(x * cellWidth, y * cellHeight, cellWidth, cellHeight);
-          }
-        }
-      }
-      // Desenha o jogador (em verde)
-      ctx.fillStyle = "lime";
-      ctx.beginPath();
-      ctx.arc(playerX * cellWidth, playerY * cellHeight, Math.min(cellWidth, cellHeight) / 2, 0, Math.PI * 2);
-      ctx.fill();
-      // Desenha os inimigos (em vermelho)
-      enemies.forEach(enemy => {
-        if (!enemy.alive) return;
-        ctx.fillStyle = "red";
-        ctx.beginPath();
-        ctx.arc(enemy.x * cellWidth, enemy.y * cellHeight, Math.min(cellWidth, cellHeight) / 2, 0, Math.PI * 2);
-        ctx.fill();
-      });
-    }
   </script>
 </body>
 </html>

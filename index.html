@@ -6,6 +6,7 @@
   <style>
     /* Estilo retrô: visual de terminal antigo */
     body {
+      /* O fundo original é preto, mas vamos animá-lo */
       background-color: #000;
       color: #0F0;
       font-family: 'Courier New', Courier, monospace;
@@ -16,6 +17,20 @@
       align-items: center;
       height: 100vh;
       text-align: center;
+      /* Adicionando animação de flash para simular disparo de arma */
+      animation: gunshotFlash 3s infinite;
+    }
+    
+    /* Animação que faz o fundo piscar como um flash */
+    @keyframes gunshotFlash {
+      /* Quase todo o tempo o fundo fica preto */
+      0%, 95%, 100% {
+        background-color: #000;
+      }
+      /* Nos momentos 96% a 98% do ciclo, um flash branco aparece */
+      96%, 98% {
+        background-color: #fff;
+      }
     }
     
     .menu-container {

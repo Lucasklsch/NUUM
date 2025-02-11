@@ -37,22 +37,22 @@
     }
 
     @keyframes gunshotFlash {
-  0%, 100% {
-    background-color: transparent;
-  }
-  /* Primeiro flash */
-  10%, 25% {
-    background-color: rgba(255, 255, 255, 0.8);
-  }
-  /* Segundo flash */
-  25%, 50% {
-    background-color: rgba(255, 255, 255, 0.8);
-  }
-  /* Terceiro flash */
-  50%, 75% {
-    background-color: rgba(255, 255, 255, 0.8);
-  }
-}
+      0%, 100% {
+        background-color: transparent;
+      }
+      /* Primeiro flash */
+      10%, 25% {
+        background-color: rgba(255, 255, 255, 0.8);
+      }
+      /* Segundo flash */
+      25%, 50% {
+        background-color: rgba(255, 255, 255, 0.8);
+      }
+      /* Terceiro flash */
+      50%, 75% {
+        background-color: rgba(255, 255, 255, 0.8);
+      }
+    }
 
     .menu-container {
       border: 3px solid #0F0;
@@ -119,23 +119,23 @@
   </style>
 </head>
 <body>
- <script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const audio = document.getElementById("bg-music");
-    
-    // Tenta tocar automaticamente
-    audio.play().catch(() => {
-      console.warn("Autoplay bloqueado! O usuário precisa interagir primeiro.");
-    });
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const audio = document.getElementById("bg-music");
+      
+      // Tenta tocar o áudio automaticamente
+      audio.play().catch(() => {
+        console.warn("Autoplay bloqueado! O usuário precisa interagir primeiro.");
+      });
 
-    // Se o usuário clicar na tela, começa a música
-    document.body.addEventListener("click", () => {
-      if (audio.paused) {
-        audio.play();
-      }
+      // Se o usuário clicar na tela, inicia a reprodução caso o áudio esteja pausado
+      document.body.addEventListener("click", () => {
+        if (audio.paused) {
+          audio.play();
+        }
+      });
     });
-  });
-</script>
+  </script>
 
   <div class="menu-container">
     <h1>Nuum Game</h1>
@@ -143,5 +143,11 @@
     <a class="button" href="nuum.html?mode=pc">Jogar no PC</a>
     <a class="button" href="nuum.html?mode=touch">Jogar no Touch Screen</a>
   </div>
+
+  <!-- Elemento de áudio configurado para tocar o arquivo music.mp3 -->
+  <audio id="bg-music" loop>
+    <source src="music.mp3" type="audio/mp3">
+    Seu navegador não suporta o elemento de áudio.
+  </audio>
 </body>
 </html>

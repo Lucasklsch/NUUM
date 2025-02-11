@@ -41,15 +41,27 @@
       transition: transform 0.1s;
     }
     /* Controles para touch screen */
+    /* Esses controles só serão exibidos quando o modo for "touch" */
     #touch-controls {
-      position: absolute;
-      bottom: -20px;
-      left: 20%;
-      transform: translateX(-50%);
-      z-index: 5;
-      display: none; /* Exibido apenas se o modo for touch */
+      display: none; /* Inicialmente oculto; exibido se mode=touch */
+    }
+    /* Layout flex para separar os controles de movimentação e de ação */
+    #touch-controls.fixed {
+      position: fixed;
+      bottom: 20px;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 20px;
+      z-index: 10;
       user-select: none;
     }
+    /* Controles de movimentação (à esquerda) */
+    #touch-movement {
+      /* Pode ajustar a posição e tamanho conforme necessário */
+    }
+    /* Layout do dpad */
     #dpad {
       display: grid;
       grid-template-areas: 
@@ -57,7 +69,6 @@
          "left . right"
          ". down .";
       grid-gap: 10px;
-      margin-bottom: 20px;
     }
     #dpad button {
       background: #333;
@@ -68,6 +79,33 @@
       height: 60px;
       border-radius: 8px;
     }
+    /* Controles de ação (à direita) */
+    #touch-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    /* Seletor de armas */
+    #weapon-selector {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    #weapon-selector button {
+      background: #333;
+      border: 2px solid #0F0;
+      color: #0F0;
+      font-size: 1rem;
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+    }
+    /* Destaque para a arma selecionada */
+    #weapon-selector button.active-weapon {
+      background: #0F0;
+      color: #000;
+    }
+    /* Botão de disparo */
     #btn-shoot {
       background: #0F0;
       border: 2px solid #0F0;
@@ -114,15 +152,26 @@
     <pre id="screen"></pre>
     <img id="weapon" src="weapon.png" alt="Arma">
     
-    <!-- Controles Touch (visíveis em modo touch) -->
-    <div id="touch-controls">
-      <div id="dpad">
-        <button id="btn-up" style="grid-area: up;">&#9650;</button>
-        <button id="btn-left" style="grid-area: left;">&#9664;</button>
-        <button id="btn-right" style="grid-area: right;">&#9654;</button>
-        <button id="btn-down" style="grid-area: down;">&#9660;</button>
+    <!-- Controles Touch (visíveis apenas se o modo for "touch") -->
+    <div id="touch-controls" class="fixed">
+      <!-- Controles de movimentação (à esquerda) -->
+      <div id="touch-movement">
+        <div id="dpad">
+          <button id="btn-up" style="grid-area: up;">&#9650;</button>
+          <button id="btn-left" style="grid-area: left;">&#9664;</button>
+          <button id="btn-right" style="grid-area: right;">&#9654;</button>
+          <button id="btn-down" style="grid-area: down;">&#9660;</button>
+        </div>
       </div>
-      <button id="btn-shoot">Shoot</button>
+      <!-- Controles de ação (à direita) -->
+      <div id="touch-actions">
+        <div id="weapon-selector">
+          <button id="btn-pistol">Pistola</button>
+          <button id="btn-shotgun">Shotgun</button>
+          <button id="btn-bfg">BFG</button>
+        </div>
+        <button id="btn-shoot">Disparar</button>
+      </div>
     </div>
     
     <!-- Elementos de áudio -->
@@ -134,7 +183,7 @@
   
   <!-- HUD Estilizado com Status e Minimapa -->
   <div id="hud-container">
-    <div id="status">Vida: 100  Munição: 30  Arma: PISTOL</div>
+    <div id="status">Vida: 100  Munição: 30  Arma: PISTOLA</div>
     <canvas id="minimap" width="150" height="150"></canvas>
   </div>
   
@@ -143,7 +192,7 @@
     const urlParams = new URLSearchParams(window.location.search);
     const gameMode = urlParams.get('mode') || 'pc';
     if (gameMode === 'touch') {
-      document.getElementById('touch-controls').style.display = 'block';
+      document.getElementById('touch-controls').style.display = 'flex';
     }
     
     ///////////////////////////////////
@@ -303,6 +352,7 @@
     
     // Controles Touch (para mobile)
     if (gameMode === 'touch') {
+      // Função auxiliar para controles de movimentação (dpad)
       function addTouchControl(buttonId, keyValue) {
         const btn = document.getElementById(buttonId);
         if (!btn) return;
@@ -327,13 +377,83 @@
       addTouchControl("btn-down", "s");
       addTouchControl("btn-left", "a");
       addTouchControl("btn-right", "d");
+      
+      // Botão de disparo: dispara ao tocar ou clicar
       const shootBtn = document.getElementById("btn-shoot");
       if (shootBtn) {
-        shootBtn.addEventListener("touchstart", (e) => { keys[" "] = true; e.preventDefault(); });
-        shootBtn.addEventListener("mousedown", (e) => { keys[" "] = true; e.preventDefault(); });
-        shootBtn.addEventListener("touchend", (e) => { keys[" "] = false; e.preventDefault(); });
-        shootBtn.addEventListener("mouseup", (e) => { keys[" "] = false; e.preventDefault(); });
+        shootBtn.addEventListener("touchstart", (e) => {
+          if (!gameOver && playerAmmo > 0) {
+            shootCurrentWeapon();
+            playerAmmo--;
+          }
+          e.preventDefault();
+        });
+        shootBtn.addEventListener("mousedown", (e) => {
+          if (!gameOver && playerAmmo > 0) {
+            shootCurrentWeapon();
+            playerAmmo--;
+          }
+          e.preventDefault();
+        });
       }
+      
+      // Botões de troca de arma
+      const btnPistol = document.getElementById("btn-pistol");
+      const btnShotgun = document.getElementById("btn-shotgun");
+      const btnBFG = document.getElementById("btn-bfg");
+      if (btnPistol && btnShotgun && btnBFG) {
+        btnPistol.addEventListener("touchstart", (e) => {
+          currentWeapon = "pistol";
+          document.getElementById("weapon").src = "weapon.png";
+          updateWeaponButtonStyles("btn-pistol");
+          e.preventDefault();
+        });
+        btnPistol.addEventListener("mousedown", (e) => {
+          currentWeapon = "pistol";
+          document.getElementById("weapon").src = "weapon.png";
+          updateWeaponButtonStyles("btn-pistol");
+          e.preventDefault();
+        });
+        btnShotgun.addEventListener("touchstart", (e) => {
+          currentWeapon = "shotgun";
+          document.getElementById("weapon").src = "shotgun.png";
+          updateWeaponButtonStyles("btn-shotgun");
+          e.preventDefault();
+        });
+        btnShotgun.addEventListener("mousedown", (e) => {
+          currentWeapon = "shotgun";
+          document.getElementById("weapon").src = "shotgun.png";
+          updateWeaponButtonStyles("btn-shotgun");
+          e.preventDefault();
+        });
+        btnBFG.addEventListener("touchstart", (e) => {
+          currentWeapon = "bfg";
+          document.getElementById("weapon").src = "bfg.png";
+          updateWeaponButtonStyles("btn-bfg");
+          e.preventDefault();
+        });
+        btnBFG.addEventListener("mousedown", (e) => {
+          currentWeapon = "bfg";
+          document.getElementById("weapon").src = "bfg.png";
+          updateWeaponButtonStyles("btn-bfg");
+          e.preventDefault();
+        });
+      }
+      // Função para atualizar o destaque do botão de arma selecionada
+      function updateWeaponButtonStyles(activeButtonId) {
+        ["btn-pistol", "btn-shotgun", "btn-bfg"].forEach(id => {
+          const btn = document.getElementById(id);
+          if (btn) {
+            if (id === activeButtonId) {
+              btn.classList.add("active-weapon");
+            } else {
+              btn.classList.remove("active-weapon");
+            }
+          }
+        });
+      }
+      // Inicializa com a pistola selecionada
+      updateWeaponButtonStyles("btn-pistol");
     }
     
     ///////////////////////////////////
@@ -742,7 +862,7 @@
     requestAnimationFrame(gameLoop);
     
     ///////////////////////////////////
-    // Funções do HUD e Minimapa
+    // Funções do HUD e Minimapa (duplicadas para compatibilidade)
     ///////////////////////////////////
     function updateHUD() {
       const statusEl = document.getElementById("status");
